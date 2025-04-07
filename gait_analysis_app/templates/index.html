@@ -2,10 +2,32 @@
 <html>
 <head>
     <title>歩行動作解析アプリ</title>
+    <style>
+        #cameraView {
+            width: 640px; /* カメラ映像の幅 */
+            height: 480px; /* カメラ映像の高さ */
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
     <h1>歩行動作解析アプリ</h1>
-    <p>ここにカメラの映像や操作ボタンなどを配置します。</p>
+
+    <div>
+        <h2>カメラ映像</h2>
+        <video id="cameraView" autoplay playsinline></video>
+    </div>
+
+    <div>
+        <h2>撮影方向</h2>
+        <input type="radio" id="direction_front_back" name="shooting_direction" value="front_back" checked>
+        <label for="direction_front_back">前後</label><br>
+        <input type="radio" id="direction_left_right" name="shooting_direction" value="left_right">
+        <label for="direction_left_right">左右</label>
+    </div>
+
+    <script>
+        // JavaScriptでカメラへのアクセスと映像表示を行うコードは後で追加します
+    </script>
 </body>
 </html>
-
