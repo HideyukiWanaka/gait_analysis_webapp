@@ -4,8 +4,8 @@
     <title>歩行動作解析アプリ</title>
     <style>
         #cameraView {
-            width: 640px; /* カメラ映像の幅 */
-            height: 480px; /* カメラ映像の高さ */
+            width: 640px;
+            height: 480px;
             border: 1px solid black;
         }
     </style>
@@ -26,8 +26,6 @@
         <label for="direction_left_right">左右</label>
     </div>
 
-    <script>
-        // JavaScriptでカメラへのアクセスと映像表示を行うコードは後で追加します
-    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
