@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', resizeCanvas);
 
     function startCamera() {
-        const constraints = { video: { facingMode: { exact: 'environment' } } };
+        const constraints = {
+    video: { facingMode: 'environment' } // 利用可能な背面カメラを優先
+};
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia(constraints)
             .then(function(videoStream) {
