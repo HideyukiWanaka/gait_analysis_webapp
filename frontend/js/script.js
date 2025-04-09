@@ -1,12 +1,13 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async () => {
     const cameraView = document.getElementById('cameraView');
     const resultsCanvas = document.createElement('canvas');
     const resultsCtx = resultsCanvas.getContext('2d');
-    let stream;
+    let pose;
+    let camera;
 
     // リサイズ後の幅と高さ
-    const resizedWidth = 320;
-    const resizedHeight = 240;
+    const resizedWidth = 640;  // サンプルコードに合わせて幅を大きく
+    const resizedHeight = 480; // サンプルコードに合わせて高さを大きく
 
     // カメラ映像の上に重ねて描画するためのcanvasをbodyに追加
     document.body.appendChild(resultsCanvas);
@@ -17,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
     resultsCanvas.height = resizedHeight;
 
     function resizeCanvas() {
+        resultsCanvas.width = cameraView.videoWidth;
+        resultsCanvas.height = cameraView.videoHeight;
         resultsCanvas.style.top = cameraView.offsetTop + 'px';
         resultsCanvas.style.left = cameraView.offsetLeft + 'px';
     }
@@ -24,21 +27,86 @@ document.addEventListener('DOMContentLoaded', function() {
     cameraView.addEventListener('loadedmetadata', resizeCanvas);
     window.addEventListener('resize', resizeCanvas);
 
-    function startCamera() {
-        const constraints = {
-    video: { facingMode: 'environment' } // 利用可能な背面カメラを優先
-};
+    async function startCamera(facingMode) {
+        let constraints = { video: true }; // デフォルトの制約
+
+        if (facingMode) {
+            constraints = {
+                video: { facingMode: facingMode }
+            };
+        }
+
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia(constraints)
-            .then(function(videoStream) {
-                stream = videoStream;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraView.srcObject = stream;
-            })
-            .catch(function(error) {
+
+                // カメラ初期化
+                camera = new Camera(cameraView, { // Cameraクラスを使用
+                    onFrame: async () => {
+                        await pose.send({ image: cameraView });
+                    },
+                    width: resizedWidth,
+                    height: resizedHeight
+                });
+                camera.start(); // カメラ開始
+            } catch (error) {
                 console.error('カメラへのアクセスに失敗しました:', error);
-            });
+            }
         } else {
             console.error('getUserMedia APIに対応していません。');
+        }
+
+        // MediaPipe Poseの初期化
+        pose = new Pose({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }
+        });
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            smoothSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        pose.onResults(onResults);
+        await pose.initialize();
+    }
+
+    // 撮影方向が変更されたときにカメラを再起動する関数
+    function changeCameraDirection() {
+        const direction = document.querySelector('input[name="shooting_direction"]:checked').value;
+        let facingMode = null;
+
+        if (direction === 'front_back') {
+            facingMode = 'environment'; // 背面カメラ
+        } else if (direction === 'left_right') {
+            facingMode = 'user'; // 前面カメラ
+        }
+
+        if (camera) {
+            camera.stop(); // カメラ停止
+        }
+        startCamera(facingMode); // 新しい方向でカメラを起動
+    }
+
+    // 初期状態でカメラを起動
+    startCamera('environment'); // 初期設定として背面カメラを起動
+
+    // 撮影方向のラジオボタンが変更されたときに changeCameraDirection 関数を実行
+    const radioButtons = document.querySelectorAll('input[name="shooting_direction"]');
+    radioButtons.forEach(button => {
+        button.addEventListener('change', changeCameraDirection);
+    });
+
+    function onResults(results) {
+        resultsCtx.clearRect(0, 0, resultsCanvas.width, resultsCanvas.height);
+        resizeCanvas();
+
+        if (results.poseLandmarks) {
+            drawLandmarks(results.poseLandmarks);
         }
     }
 
@@ -65,8 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         for (const connection of connections) {
-            const index1 = connection[0];
-            const index2 = connection[1];
+            const index1 = connections[0];
+            const index2 = connections[1];
             if (landmarks[index1] && landmarks[index2]) {
                 const x1 = landmarks[index1].x * resultsCanvas.width;
                 const y1 = landmarks[index1].y * resultsCanvas.height;
@@ -83,42 +151,4 @@ document.addEventListener('DOMContentLoaded', function() {
             landmarks.forEach(drawPoint);
         }
     }
-
-    function sendFrameToServer() {
-        if (!cameraView.videoWidth || !cameraView.videoHeight) {
-            return;
-        }
-
-        resizeCanvas();
-
-        const canvas = document.createElement('canvas');
-        canvas.width = resizedWidth;
-        canvas.height = resizedHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(cameraView, 0, 0, resizedWidth, resizedHeight);
-
-        canvas.toBlob(function(blob) {
-            const formData = new FormData();
-            formData.append('image', blob, 'frame.jpg');
-
-            fetch('https://gait-analysis-webapp.onrender.com/process_frame', {  // バックエンドのURL
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.landmarks) {
-                    drawLandmarks(data.landmarks);
-                }
-                console.log('サーバーからの応答:', data);
-            })
-            .catch(error => {
-                console.error('フレーム送信エラー:', error);
-            });
-        }, 'image/jpeg', 0.7);
-    }
-
-    setInterval(sendFrameToServer, 1000 / 30);
-
-    startCamera();
 });
