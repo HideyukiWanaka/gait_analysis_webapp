@@ -4,15 +4,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsCtx = resultsCanvas.getContext('2d');
     let stream;
 
+    // リサイズ後の幅と高さ
+    const resizedWidth = 320;  // 例：幅を半分に
+    const resizedHeight = 240; // 例：高さを半分に
+
     // カメラ映像の上に重ねて描画するためのcanvasをbodyに追加
     document.body.appendChild(resultsCanvas);
     resultsCanvas.style.position = 'absolute';
     resultsCanvas.style.top = cameraView.offsetTop + 'px';
     resultsCanvas.style.left = cameraView.offsetLeft + 'px';
+    resultsCanvas.width = resizedWidth;   // 初期サイズを設定
+    resultsCanvas.height = resizedHeight; // 初期サイズを設定
 
     function resizeCanvas() {
-        resultsCanvas.width = cameraView.videoWidth;
-        resultsCanvas.height = cameraView.videoHeight;
         resultsCanvas.style.top = cameraView.offsetTop + 'px';
         resultsCanvas.style.left = cameraView.offsetLeft + 'px';
     }
@@ -21,9 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', resizeCanvas);
 
     function startCamera() {
-        const constraints = {
-    video: { facingMode: ['environment', 'user'] } // 背面カメラがなければ前面カメラを使用
-};
+        const constraints = { video: { facingMode: { exact: 'environment' } } };
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia(constraints)
             .then(function(videoStream) {
@@ -48,11 +50,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const x = landmark.x * resultsCanvas.width;
             const y = landmark.y * resultsCanvas.height;
             resultsCtx.beginPath();
-            resultsCtx.arc(x, y, 10, 0, 2 * Math.PI);
+            resultsCtx.arc(x, y, 5, 0, 2 * Math.PI); // 点のサイズも小さく
             resultsCtx.fill();
         }
 
-        // ランドマークの接続 (MediaPipeのPOSE_CONNECTIONSと同様)
         const connections = [
             [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8],
             [9, 10], [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
@@ -86,13 +87,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        resizeCanvas(); // フレーム送信前にcanvasのサイズを調整
+        resizeCanvas();
 
         const canvas = document.createElement('canvas');
-        canvas.width = cameraView.videoWidth;
-        canvas.height = cameraView.videoHeight;
+        canvas.width = resizedWidth;   // 送信する画像の幅
+        canvas.height = resizedHeight; // 送信する画像の高さ
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(cameraView, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(cameraView, 0, 0, resizedWidth, resizedHeight); // リサイズして描画
 
         canvas.toBlob(function(blob) {
             const formData = new FormData();
@@ -112,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('フレーム送信エラー:', error);
             });
-        }, 'image/jpeg', 0.8);
+        }, 'image/jpeg', 0.7); // 少し圧縮率を上げてみる
     }
 
     setInterval(sendFrameToServer, 1000 / 30);
