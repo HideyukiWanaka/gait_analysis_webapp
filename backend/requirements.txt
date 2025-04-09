@@ -3,3 +3,4 @@ gunicorn
 opencv-python
 mediapipe
 Pillow
+flask-cors
