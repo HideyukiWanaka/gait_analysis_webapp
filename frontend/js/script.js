@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData();
             formData.append('image', blob, 'frame.jpg');
 
-            fetch('http://your-backend-url/process_frame', {  // バックエンドのURL
+            fetch('https://gait-analysis-webapp.onrender.com', {  // バックエンドのURL
                 method: 'POST',
                 body: formData
             })
