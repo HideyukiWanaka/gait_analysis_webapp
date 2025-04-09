@@ -1,5 +1,0 @@
-Flask
-gunicorn
-opencv-python
-mediapipe
-Pillow
