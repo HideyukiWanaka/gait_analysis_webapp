@@ -21,7 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', resizeCanvas);
 
     function startCamera() {
-        const constraints = { video: { facingMode: { exact: 'environment' } } };
+        const constraints = {
+    video: { facingMode: ['environment', 'user'] } // 背面カメラがなければ前面カメラを使用
+};
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia(constraints)
             .then(function(videoStream) {
